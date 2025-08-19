@@ -1,6 +1,6 @@
 ---
-- name: Proxmox - Kubernetes Cluster
-  hosts: kubernetes
+- name: Destroy Proxmox VM's for Kubernetes Cluster
+  hosts: k3s
   gather_facts: false
 
   tasks:
