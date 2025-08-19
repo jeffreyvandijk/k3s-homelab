@@ -59,17 +59,12 @@
   ansible.builtin.shell: kubectl get storageclass
   args:
     executable: /bin/bash
+  register: longhorn_storageclass
+  retries: 20
+  delay: 15
+  until: longhorn_storageclass.stdout is search("longhorn")
   changed_when: false
   failed_when: false
-  register: longhorn_storageclass
-
-- name: Ansible // Wait for longhorn to be installed into the cluster
-  ansible.builtin.wait_for:
-    port: 22
-    delay: 30
-    sleep: 10
-    timeout: 300
-  when: longhorn_storageclass.stdout is search("longhorn")
 
 - name: Kubernetes // Patch storageclass to longhorn
   ansible.builtin.shell: |
