@@ -88,3 +88,84 @@
         executable: /bin/bash
       changed_when: false
       when: inventory_hostname in groups['worker']
+
+    - name: Linux // Update & Install open-iscsi
+      ansible.builtin.apt:
+        name: open-iscsi
+        update_cache: true
+      become: true
+
+    - name: Linux // Enable and start open-iscsi
+      ansible.builtin.systemd_service:
+        name: open-iscsi
+        state: started
+        enabled: true
+      become: true
+
+    - name: Linux // Download Helm
+      ansible.builtin.shell: curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+
+    - name: Linux // Chmod get_helm.sh
+      ansible.builtin.shell: chmod 700 get_helm.sh
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+
+    - name: Linux // Install Helm
+      ansible.builtin.shell: ./get_helm.sh
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+
+    - name: Helm // Helm add repo longhorn
+      ansible.builtin.shell: helm repo add longhorn https://charts.longhorn.io
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+
+    - name: Helm // Helm repo update
+      ansible.builtin.shell: helm repo update
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+
+    - name: Kubernetes // kubectl create namespace longhorn-system
+      ansible.builtin.shell: kubectl create namespace longhorn-system
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+
+    - name: Helm // Install longhorn-system
+      ansible.builtin.shell: export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && helm install longhorn longhorn/longhorn --namespace longhorn-system
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+      failed_when: false
+
+    - name: Ansible // Wait for longhorn to be installed into the cluster
+      ansible.builtin.wait_for:
+        timeout: 300
+      delegate_to: localhost
+      run_once: true
+
+    - name: Kubernetes // Patch storageclass to longhorn
+      ansible.builtin.shell: |
+        kubectl patch storageclass longhorn -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname == "kube-control-01"
+
+    - name: Ansible // Import AWX deployment
+      ansible.builtin.import_tasks:
+        file: awx.yaml
