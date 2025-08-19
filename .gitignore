@@ -1,2 +1,3 @@
 .ansible
 host_vars/.DS_Store
+.vscode
