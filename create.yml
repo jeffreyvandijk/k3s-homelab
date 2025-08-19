@@ -1,0 +1,90 @@
+---
+- name: Proxmox - Kubernetes Cluster
+  hosts: kubernetes
+  gather_facts: false
+
+  tasks:
+
+    - name: Proxmox // Clone VM Template // kube-cluster
+      community.proxmox.proxmox_kvm:
+        api_user: root@pam
+        api_password: Dev0ps2025
+        api_host: pve.lan
+        clone: ubuntu-2204-template
+        vmid: 999
+        newid: "{{ id }}"
+        name: "{{ inventory_hostname }}"
+        node: pve
+        storage: local-lvm
+        format: qcow2
+        timeout: 1000
+      delegate_to: localhost
+      throttle: 1
+
+    - name: Proxmox // Network // kube-cluster
+      community.proxmox.proxmox_kvm:
+        api_user: root@pam
+        api_password: Dev0ps2025
+        api_host: pve.lan
+        name: "{{ inventory_hostname }}"
+        node: pve
+        ipconfig:
+          ipconfig0: 'ip={{ ip }},gw=192.168.1.1'
+        update: true
+      delegate_to: localhost
+
+    - name: Proxmox // Start VM // kube-cluster
+      community.proxmox.proxmox_kvm:
+        api_user: root@pam
+        api_password: Dev0ps2025
+        api_host: pve.lan
+        name: "{{ inventory_hostname }}"
+        node: pve
+        state: started
+      delegate_to: localhost
+      throttle: 1
+
+    - name: Ansible // Wait for kube-cluster to be reachable
+      ansible.builtin.wait_for:
+        timeout: 300
+      delegate_to: localhost
+
+    - name: Linux // Install k3s on kube-control-01
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | sh -s - server \
+          --cluster-init \
+          --node-taint "CriticalAddonsOnly=true:NoExecute" \
+          --tls-san 192.168.1.30 \
+          --write-kubeconfig-mode 644
+      args:
+        executable: /bin/bash
+      changed_when: false
+      delegate_to: kube-control-01
+      run_once: true
+
+    - name: Linux // Get k3s token from kube-control-01
+      ansible.builtin.shell: sudo cat /var/lib/rancher/k3s/server/node-token
+      args:
+        executable: /bin/bash
+      register: k3s_token
+      delegate_to: kube-control-01
+      run_once: true
+
+    - name: Linux // Install k3s on kube-control-02
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.30:6443 K3S_TOKEN={{ k3s_token.stdout }} sh -s - server \
+        --node-taint CriticalAddonsOnly=true:NoExecute \
+        --tls-san 192.168.1.30 \
+        --write-kubeconfig-mode 644
+      args:
+        executable: /bin/bash
+      changed_when: false
+      delegate_to: kube-control-02
+      run_once: true
+
+    - name: Linux // Install k3s on kube-workers
+      ansible.builtin.shell: curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.30:6443 K3S_TOKEN={{ k3s_token.stdout }} sh -
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: inventory_hostname in groups['worker']

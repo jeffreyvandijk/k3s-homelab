@@ -1,0 +1,29 @@
+---
+- name: Proxmox - Kubernetes Cluster
+  hosts: kubernetes
+  gather_facts: false
+
+  tasks:
+
+    - name: Proxmox // Stop // kube-cluster
+      community.general.proxmox_kvm:
+        api_user: root@pam
+        api_password: Dev0ps2025
+        api_host: pve.lan
+        name: "{{ inventory_hostname }}"
+        node: pve
+        state: stopped
+        force: true
+      failed_when: false
+      delegate_to: localhost
+
+    - name: Proxmox // Destroy // kube-cluster
+      community.proxmox.proxmox_kvm:
+        api_user: root@pam
+        api_password: Dev0ps2025
+        api_host: pve.lan
+        name: "{{ inventory_hostname }}"
+        node: pve
+        state: absent
+      failed_when: false
+      delegate_to: localhost
