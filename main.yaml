@@ -1,0 +1,24 @@
+- name: Build Proxmox VM's for Kubernetes Cluster
+  hosts: k3s
+  gather_facts: false
+  roles:
+    - role: proxmox_base_vm
+
+- name: Prepare k3s nodes
+  hosts: k3s
+  gather_facts: false
+  roles:
+    - role: k3s_master
+    - role: k3s_worker
+
+- name: Install longhorn storage on k3s cluster
+  hosts: kube-control-01
+  gather_facts: false
+  roles:
+    - role: k3s_longhorn
+
+- name: Deploy AWX on k3s cluster
+  hosts: kube-control-01
+  gather_facts: false
+  roles:
+    - role: awx_deployment
