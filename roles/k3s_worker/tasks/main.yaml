@@ -1,0 +1,6 @@
+- name: Linux // Install k3s on kube-workers
+  ansible.builtin.shell: curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.30:6443 K3S_TOKEN={{ k3s_token.stdout }} sh -
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when: inventory_hostname in groups['k3s_worker']

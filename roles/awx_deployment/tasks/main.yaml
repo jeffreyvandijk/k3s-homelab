@@ -1,0 +1,69 @@
+- name: Kubernetes // Git clone awx repo
+  ansible.builtin.shell: git clone https://github.com/jeffreyvandijk/awx-homelab.git
+  args:
+    executable: /bin/bash
+  changed_when: false
+  failed_when: false
+
+- name: Kubernetes // AWX Operator
+  ansible.builtin.shell: kubectl apply -k operator
+  args:
+    executable: /bin/bash
+    chdir: awx-homelab
+  changed_when: false
+
+- name: Linux // Openssl certificate
+  ansible.builtin.shell: AWX_HOST="awx.lan" && openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -out ./base/tls.crt -keyout ./base/tls.key -subj "/CN=$- {AWX_HOST}/O=${AWX_HOST}" -addext "subjectAltName = DNS:${AWX_HOST}"
+  args:
+    executable: /bin/bash
+    chdir: awx-homelab
+  changed_when: false
+
+- name: Linux // Set postgress password
+  ansible.builtin.lineinfile:
+    path: /home/sysadmin/awx-homelab/base/kustomization.yaml
+    regexp: 'password=<your-postgres-password>'
+    line: '      - password=supersecret'
+    state: present
+    owner: sysadmin
+    group: sysadmin
+    mode: '0644'
+
+- name: Linux // Set awx-admin password
+  ansible.builtin.lineinfile:
+    path: /home/sysadmin/awx-homelab/base/kustomization.yaml
+    regexp: 'password=<your-admin-password>'
+    line: '      - password=supersecret'
+    state: present
+    owner: sysadmin
+    group: sysadmin
+    mode: '0644'
+
+- name: Linux // Set AWX DNS
+  ansible.builtin.lineinfile:
+    path: /home/sysadmin/awx-homelab/base/awx.yaml
+    regexp: 'hostname: <your-awx-hostname>'
+    line: '    - hostname: awx.lan'
+    state: present
+    owner: sysadmin
+    group: sysadmin
+    mode: '0644'
+
+- name: Kubernetes // AWX Base Install
+  ansible.builtin.shell: kubectl apply -k base
+  args:
+    executable: /bin/bash
+    chdir: awx-homelab
+  changed_when: false
+
+- name: Linux // Check of awx.lan beschikbaar is
+  ansible.builtin.uri:
+    url: 'https://awx.lan'
+    return_content: true
+    validate_certs: false
+    status_code:
+      - 200
+  until: uri_output.status == 200
+  retries: 30 # Retries for 30 * 60 seconds = 1.800 seconds = 30 minutes
+  delay: 60 # Every 60 seconds
+  register: uri_output
