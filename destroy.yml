@@ -8,7 +8,7 @@
     - name: Proxmox // Stop // kube-cluster
       community.general.proxmox_kvm:
         api_user: root@pam
-        api_password: Dev0ps2025
+        api_password: "{{ pw }}"
         api_host: pve.lan
         name: "{{ inventory_hostname }}"
         node: pve
@@ -20,7 +20,7 @@
     - name: Proxmox // Destroy // kube-cluster
       community.proxmox.proxmox_kvm:
         api_user: root@pam
-        api_password: Dev0ps2025
+        api_password: "{{ pw }}"
         api_host: pve.lan
         name: "{{ inventory_hostname }}"
         node: pve

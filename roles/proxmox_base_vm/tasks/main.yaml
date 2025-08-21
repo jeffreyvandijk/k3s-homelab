@@ -1,7 +1,7 @@
 - name: Proxmox // Clone VM Template // kube-cluster
   community.proxmox.proxmox_kvm:
     api_user: root@pam
-    api_password: Dev0ps2025
+    api_password: "{{ pw }}"
     api_host: pve.lan
     clone: ubuntu-2204-template
     vmid: 999
@@ -17,7 +17,7 @@
 - name: Proxmox // Network // kube-cluster
   community.proxmox.proxmox_kvm:
     api_user: root@pam
-    api_password: Dev0ps2025
+    api_password: "{{ pw }}"
     api_host: pve.lan
     name: "{{ inventory_hostname }}"
     node: pve
@@ -29,7 +29,7 @@
 - name: Proxmox // Start VM // kube-cluster
   community.proxmox.proxmox_kvm:
     api_user: root@pam
-    api_password: Dev0ps2025
+    api_password: "{{ pw }}"
     api_host: pve.lan
     name: "{{ inventory_hostname }}"
     node: pve
