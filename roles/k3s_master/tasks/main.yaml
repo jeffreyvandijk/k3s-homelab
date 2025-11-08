@@ -18,15 +18,3 @@
   register: k3s_token
   delegate_to: kube-control-01
   run_once: true
-
-- name: Linux // Install k3s on kube-control-02
-  ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.30:6443 K3S_TOKEN={{ k3s_token.stdout }} sh -s - server \
-    --node-taint CriticalAddonsOnly=true:NoExecute \
-    --tls-san 192.168.1.30 \
-    --write-kubeconfig-mode 644
-  args:
-    executable: /bin/bash
-  changed_when: false
-  delegate_to: kube-control-02
-  run_once: true
